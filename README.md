@@ -13,19 +13,19 @@ A tool to bypass client-side regional restrictions in Antigravity (CLI, Desktop 
 
 ## Installation
 
-### Release Bundle
+### Release Bundle & Binaries
 
-Download the bundle for your platform and run the installer:
+Download the release for your platform from [Releases](https://github.com/cu-e/antigravity-region-fix/releases):
 
-```sh
-# Linux / macOS
-sh install.sh
-```
-
-```powershell
-# Windows
-.\install.ps1
-```
+- **Windows:** download and run `antigravity-region-fix-windows-installer.exe` (one-click installer) or extract the zip archive and run:
+  ```powershell
+  .\install.ps1
+  ```
+- **Linux / macOS:** download and extract the archive, then run the installation script:
+  ```sh
+  sh install.sh
+  ```
+  Standalone executable binaries (`pagy` and `antigravity-region-fix`) are also provided directly in the release assets.
 
 Default install locations:
 

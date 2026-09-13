@@ -15,17 +15,17 @@
 
 ### Готовые бинарники
 
-Скачайте архив для вашей платформы и запустите скрипт установки:
+Скачайте релиз для вашей платформы со страницы [Releases](https://github.com/cu-e/antigravity-region-fix/releases):
 
-```sh
-# Linux / macOS
-sh install.sh
-```
-
-```powershell
-# Windows
-.\install.ps1
-```
+- **Windows:** скачайте и запустите `antigravity-region-fix-windows-installer.exe` (установка в один клик) либо распакуйте архив и выполните:
+  ```powershell
+  .\install.ps1
+  ```
+- **Linux / macOS:** скачайте и распакуйте архив, затем запустите скрипт установки:
+  ```sh
+  sh install.sh
+  ```
+  Также в релизах доступны отдельные автономные бинарники `pagy` и `antigravity-region-fix`.
 
 Каталоги установки по умолчанию:
 
