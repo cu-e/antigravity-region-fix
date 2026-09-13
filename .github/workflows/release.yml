@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 permissions:
   contents: write
@@ -16,13 +16,13 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            asset_name: antigravity-region-fix-linux-x86_64
+            target_slug: linux-x86_64
             archive_format: tar.gz
           - os: macos-latest
-            asset_name: antigravity-region-fix-darwin-arm64
+            target_slug: darwin-arm64
             archive_format: tar.gz
           - os: windows-latest
-            asset_name: antigravity-region-fix-windows-x86_64
+            target_slug: windows-x86_64
             archive_format: zip
 
     runs-on: ${{ matrix.os }}
@@ -47,14 +47,60 @@ jobs:
 
       - name: Create tar.gz archive
         if: matrix.archive_format == 'tar.gz'
-        run: tar -czvf ${{ matrix.asset_name }}.tar.gz -C bundle .
+        run: tar -czvf antigravity-region-fix-${{ matrix.target_slug }}.tar.gz -C bundle .
 
       - name: Create zip archive
         if: matrix.archive_format == 'zip'
         shell: pwsh
-        run: Compress-Archive -Path bundle/* -DestinationPath "${{ matrix.asset_name }}.zip"
+        run: Compress-Archive -Path bundle/* -DestinationPath "antigravity-region-fix-${{ matrix.target_slug }}.zip"
+
+      - name: Collect release assets
+        shell: bash
+        run: |
+          mkdir -p release-assets
+          suffix=""
+          if [ "$RUNNER_OS" = "Windows" ]; then suffix=".exe"; fi
+
+          # Full bundle archive
+          cp antigravity-region-fix-${{ matrix.target_slug }}.${{ matrix.archive_format }} release-assets/
+
+          # Standalone binaries
+          cp "target/release/pagy$suffix" "release-assets/pagy-${{ matrix.target_slug }}$suffix"
+          cp "target/release/antigravity-region-fix$suffix" "release-assets/antigravity-region-fix-${{ matrix.target_slug }}$suffix"
+
+      - name: Build Windows one-click installer (.exe)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # Create a self-extracting installer using 7-Zip SFX (preinstalled on windows-latest)
+          # Config tells 7z to extract to temp and execute install.ps1 automatically
+          $sfxConfig = @'
+          ;!@Install@!UTF-8!
+          Title="Antigravity Regional Fix Installer"
+          BeginPrompt="Install Antigravity Regional Fix on this computer?"
+          RunProgram="powershell.exe -ExecutionPolicy Bypass -File install.ps1"
+          ;!@InstallEnd@!
+          '@
+          Set-Content -Path bundle-config.txt -Value $sfxConfig -Encoding UTF8
+
+          # Create 7z archive of the bundle
+          7z a -r bundle.7z ./bundle/*
+
+          # Find 7z.sfx module
+          $sfxModule = "C:\Program Files\7-Zip\7z.sfx"
+          if (-not (Test-Path $sfxModule)) {
+              $sfxModule = (Get-ChildItem -Path "C:\Program Files*" -Filter "7z.sfx" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+          }
+
+          if ($sfxModule -and (Test-Path $sfxModule)) {
+              # Concatenate sfx module + config + archive
+              cmd /c "copy /b `"$sfxModule`" + bundle-config.txt + bundle.7z release-assets\antigravity-region-fix-windows-installer.exe"
+          } else {
+              # Fallback: create a one-click install.cmd launcher beside zip
+              Copy-Item install.ps1 release-assets/install.ps1
+          }
 
       - name: Upload asset to release
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ matrix.asset_name }}.${{ matrix.archive_format }}
+          files: release-assets/*
