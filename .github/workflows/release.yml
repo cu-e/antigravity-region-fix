@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build and upload release artifacts
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            asset_name: antigravity-region-fix-linux-x86_64
+            archive_format: tar.gz
+          - os: macos-latest
+            asset_name: antigravity-region-fix-darwin-arm64
+            archive_format: tar.gz
+          - os: windows-latest
+            asset_name: antigravity-region-fix-windows-x86_64
+            archive_format: zip
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build release binaries
+        run: cargo build --release --locked --bins
+
+      - name: Package bundle
+        shell: bash
+        run: |
+          mkdir -p bundle/bin
+          suffix=""
+          if [ "$RUNNER_OS" = "Windows" ]; then suffix=".exe"; fi
+          cp "target/release/pagy$suffix" "target/release/antigravity-region-fix$suffix" bundle/bin/
+          cp README.md README.ru.md LICENSE THIRD_PARTY_NOTICES.md TESTING.md install.sh install.ps1 bundle/
+          cp -R licenses bundle/
+
+      - name: Create tar.gz archive
+        if: matrix.archive_format == 'tar.gz'
+        run: tar -czvf ${{ matrix.asset_name }}.tar.gz -C bundle .
+
+      - name: Create zip archive
+        if: matrix.archive_format == 'zip'
+        shell: pwsh
+        run: Compress-Archive -Path bundle/* -DestinationPath "${{ matrix.asset_name }}.zip"
+
+      - name: Upload asset to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.asset_name }}.${{ matrix.archive_format }}
